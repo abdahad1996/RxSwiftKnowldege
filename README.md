@@ -1,98 +1,81 @@
-# RxSwiftKnowldege
-* RxSwift, in its essence, simplifies developing asynchronous programs by allowing your
-   code to react to new data and process it in a sequential, isolated manner
-   
-   The three building blocks of Rx code are observables, operators and schedulers. The
-    sections below cover each of these in detail.
+ # SUBJECTS
+ You’ve gotten a handle on what an observable is, how to create one, how to subscribe to
+it and how to dispose of things when you’re done. Observables are a fundamental part
+of RxSwift, but a common need when developing apps is to manually add new values
+onto an observable at runtime that will then be emitted to subscribers. What you want
+is something that can act as both an observable and as an observer. And that
+something is called a Subject.
 
-# Observables
-The Observable<T> class provides the foundation of Rx code: the ability to
-asynchronously produce a sequence of events that can “carry” an immutable snapshot
-of generic data of type T. In the simplest words, it allows other objects or consumers to
-subscribe for events, or values, emitted by another object over time.
-The Observable<T> class allows one or more observers to react to any events in real
-time and update the app's UI, or otherwise process and utilize new and incoming data.
-The ObservableType protocol (to which Observable<T> conforms) is extremely simple.
-An Observable can emit (and observers can receive) only three types of events:
-  
-• A next event: An event that “carries” the latest (or "next") data value. This is the way
-observers “receive” values. An Observable may emit an indefinite amount of these
-values, until a terminating event is emitted.
+# What are subjects?
+Subjects act as both an observable and an observer. You saw earlier how they can
+receive events and also be subscribed to. The subject received .next events, and every
+time it receives an event, it turns around and emits it to its subscribers.
+There are four subject types in RxSwift, and two relay types that wrap subjects:
 
-• A completed event: This event terminates the event sequence with success. It means
-the Observable completed its life cycle successfully and won’t emit additional events.
+• PublishSubject: Starts empty and only emits new elements to subscribers.
 
-• An error event: The Observable terminates with an error and will not emit
-additional events.
+• BehaviorSubject: Starts with an initial value and replays it or the latest element to
+new subscribers.
 
-# Finite observable sequences
-Some observable sequences emit zero, one or more values, and, at a later point, either
-terminate successfully or terminate with an error.
+• ReplaySubject: Initialized with a buffer size and will maintain a buffer of elements
+up to that size and replay it to new subscribers.
 
-In an iOS app, consider code that downloads a file from the internet:
-• First, you start the download and start observing for incoming data.
+• AsyncSubject: Emits only the last .next event in the sequence, and only when the
+subject receives a .completed event. This is a seldom used kind of subject, and you
+won't use it in this book. It's listed here for the sake of completeness.
 
-• Then you repeatedly receive chunks of data as parts of the file come in.
+• PublishRelay and BehaviorRelay: These wrap their relative subjects, but only
+accept .next events. You cannot add a .completed or .error event onto relays at all,
+so they're great for non-terminating sequences.
 
-• In the event the network connection goes down, the download will stop and the
-connection will time out with an error.
+# Working with publish subjects
+Publish subjects come in handy when you simply want subscribers to be notified of new
+events from the point at which they subscribed, until they either unsubscribe, or the
+subject has terminated with a .completed or .error event.
 
-• Alternatively, if the code downloads all the file’s data, it will complete with success
+subjects, once terminated, will re-emit its stop event to future subscribers. So
+it’s a good idea to include handlers for stop events in your code, not just to be notified
+when it terminates, but also in case it is already terminated when you subscribe to it.
+This can sometimes be the cause of subtle bugs, so watch out!
+You might use a publish subject when you’re modeling time-sensitive data, such as in
+an online bidding app. It wouldn’t make sense to alert the user who joined at 10:01 am
+that at 9:59 am there was only 1 minute left in the auction. That is, of course, unless
+you like 1-star reviews to your bidding app.
 
-# Infinite observable sequences
-Unlike file downloads or similar activities, which are supposed to terminate either
-naturally or forcefully, there are other sequences which are simply infinite. Often, UI
-events are such infinite observable sequences.
-For example, consider the code you need to react to device orientation changes in your
-app:
+# Working with behavior subjects
+Behavior subjects work similarly to publish subjects, except they will replay the
+latest .next event to new subscribers
 
-• You add your class as an observer to UIDeviceOrientationDidChange notifications
-from NotificationCenter.
+Since BehaviorSubject always emits the latest element, you can’t create one
+without providing an initial value. If you can’t provide an initial value at creation
+time, that probably means you need to use a PublishSubject instead
 
-• You then need to provide a method callback to handle orientation changes. It needs
-to grab the current orientation from UIDevice and react accordingly to the latest
-value.
+# Working with replay subjects
+Replay subjects will temporarily cache, or buffer, the latest elements they emit, up to a
+specified size of your choosing. They will then replay that buffer to new subscribers.
+The replay subject is terminated with an error, which it will reemit to new subscribers as you’ve already seen subjects do. But the buffer is also still
+hanging around, so it gets replayed to new subscribers as well, before the stop event is
+re-emitted.
+By explicitly calling dispose() on the replay subject beforehand, new subscribers will
+only receive an error event indicating that the subject was already disposed.
 
-This sequence of orientation changes does not have a natural end. As long as there is
-device, there is a possible sequence of orientation changes. Further, since the sequence
-is virtually infinite, you always have an initial value at the time you start observing it.
+# Working with relays
+As mentioned earlier, a relay wraps a subject while maintaining its replay behavior.cannot add completion and error events to relays
+Unlike other subjects (and observables in general), you add a value onto a relay by using
+the accept(_:) method. In other words, you don’t use onNext(_:). This is due to the
+fact relays can only accept values, and you cannot add a .error or .completed event
+onto them.
+A PublishRelay wraps a PublishSubject and a BehaviorRelay wraps a BehaviorSubject.
+What sets relays apart from their wrapped subjects is that they are guaranteed to never
+terminate.
 
-# Operators
-For example, take the mathematical expression: (5 + 6) * 10 - 2.
-In a clear, deterministic way, you can apply the operators *, ( ), + and - in their
-predefined order to the pieces of data that are their input, take their output and keep
-processing the expression until it’s resolved.
+Remember that publish relays simply wrap a publish subject and work just like them,
+except the accept part and that they will not terminate. How about something a little
+more interesting
 
-In a somewhat similar manner, you can apply Rx operators to the events emitted by an
-Observable to deterministically process inputs and outputs until the expression has
-been resolved to a final value, which you can then use to cause side effects
-
-
-# Schedulers
-Schedulers are the Rx equivalent of dispatch queues — just on steroids and much easier
-to use.
-RxSwift comes with a number of predefined schedulers, which cover 99% of use cases
-and hopefully means you will never have to go about creating your own scheduler.
-In fact, most of the examples in the first half of this book are quite simple and generally
-deal with observing data and updating the UI, so you won’t look into schedulers at all
-until you’ve covered the basics.
-That being said, schedulers are very powerful.
-For example, you can specify that you’d like to observe next events on a
-SerialDispatchQueueScheduler, which uses Grand Central Dispatch run your code
-serially on a given queue.
-ConcurrentDispatchQueueScheduler will run your code concurrently, while
-OperationQueueScheduler will allow you to schedule your subscriptions on a given
-OperationQueue
-
-# App architecture
-It’s worth mentioning that RxSwift doesn’t alter your app’s architecture in any way; it
-mostly deals with events, asynchronous data sequences and a universal communication
-contract.
-You can create apps with Rx by implementing MVC (Model-View-Controller)
-architecture as defined in the Apple developer documentation. You can also choose to
-implement MVP (Model-View-Presenter) architecture or MVVM (Model-ViewViewModel) if that’s what you prefe
-
-The reason MVVM and RxSwift go great together is that a ViewModel allows you to
-expose Observable<T> properties, which you can bind directly to UIKit controls in your
-View controller's glue code. This makes binding model data to the UI very simple to
-represent and to code:
+Behavior relays also will not terminate with a .completed or .error event. Because it
+wraps a behavior subject, a behavior relay is created with an initial value, and it will
+replay its latest or initial value to new subscribers. A behavior relay's special power,
+though, is that you can ask it for its current value. This feature bridges the imperative
+and reactive worlds in a useful way
+As mentioned earlier, behavior relays let you directly access their current value.
