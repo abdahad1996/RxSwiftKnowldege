@@ -1,28 +1,38 @@
-## Exposing subjects
-You’d like to add a PublishSubject to expose the properties of a view controller , but you don’t want
-the subject publicly accessible, as that would allow other classes to call onNext(_) and
-make the subject emit values. You might want to do that elsewhere, but not in this case.
-
-private let selectedPhotosSubject = PublishSubject<UIImage>()
-var selectedPhotos: Observable<UIImage> {
- return selectedPhotosSubject.asObservable()
-}
-Here, you define both a private PublishSubject that will emit the selected photos and a
-public property named selectedPhotos that exposes the subject’s observable.
-Subscribing to this property is how the a controller can observe the photo sequence,
-without being able to interfere with it.
- 
-## Disposing 
-- root view controller will not dispose when observing since it will always be on stack so we have to manually complete it form some other view controller when view did disspaoer valled
-- otherwise just adding in dispose bag and and as soon as view controller disspaoers from stack that will dispose it 
-
-## TRaits
--You can convert an observable sequence to a completable by using the
-ignoreElements() operator, in which case all next events will be ignored, with only a
-completed or error event emitted, just as required for a Completable.
-
--you can either create a Maybe directly by using Maybe.create({ ...
-}) or by converting any observable sequence via .asMaybe().
-
-- you can subscribe to any observable and use .asSingle() to convert it
-to a Single
+## Filtering
+ # Ignoring operators
+- ignoreElements will do : ignore .next event elements. It will,
+however, allow stop events through, such as .completed or .error events
+- There may be times when you only want to handle the nth (ordinal) element emitted by
+an observable, such as the third strike. For that you can use elementAt, which takes the
+index of the element you want to receive, and it ignores everything else
+An interesting fact about element(at:) is, that as soon as an element is emitted at the
+provided index, the subscription will be terminated.
+-filter. It takes a predicate closure,
+which it applies to every element emitted, allowing through only those elements for
+which the predicate resolves to true.
+ # Skipping operators
+- It might be that you need to skip a certain number of elements. The skip operator
+allows you to ignore from the 1st to the number you pass as its parameter
+- skipWhile, returning true will cause the element to be skipped, and returning
+false will let it through.and after that wverything else will fallthrough and not skip as predicate already failed once
+-  skipUntil will keep skipping elements from the source observable
+(the one you’re subscribing to) until some other trigger observable emits. In this marble
+diagram, skipUntil ignores elements emitted by the source observable (the top line)
+until the trigger observable (second line) emits a .next event. Then it stops skipping
+and lets everything through from that point on.
+# Taking operators
+-Taking is the opposite of skipping. When you want to take elements, RxSwift has you
+covered. The first taking operator you’ll learn about is take which will take elemnets till the paramter sepcified and will
+skipp the rest
+-takeWhile operator that works similarly to skipWhile, except you’re
+taking instead of skipping . you only receive elements as long as the conditions is true 
+-takeUntil operator, shown in this marble diagram, taking
+from the source observable until the trigger observable emits an element.
+ trigger  will cause takeUntil to stop taking once it
+emits
+# Distinct operators
+-distinctUntilChanged only prevents duplicates that are right
+next to each other.use distinctUntilChanged to prevent sequential duplicates from getting through.
+-distinctUntilChanged(_:), which takes a closure that receives each sequential
+pair of elements and print out elements that are considered distinct based on the
+comparing logic you provided.
