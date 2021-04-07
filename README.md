@@ -39,7 +39,9 @@ john.car.onNext("Ford Model T")
 //
 
 //explanation
-when we add onnext think of it like a loop . flat map  goes inside the first next and takes its element and makes it an observerable sequence that can be observed . wehn another next comes same happen , the element is made a sequence. both element sequences are merged to make one observable sequence that is montored 
+when we add onnext think of it like a loop . flat map  goes inside the first next and takes its element and makes it an observerable that can be observed like what map does by changing its type to observable. wehn another next comes same happen , the element is made an observable. all observable element sequences are merged to make one observable sequence that is monitored. so basically we have nested observables that are triggred when we do on next.
+
+- to make an inner observable and monitor it we use flatmap 
 
  # flatmaplatest
  flatmaplatest is similar to flatmapp except it  switches its monitoring to the newest observable and ignores emissions from previous observables. rest of the working for the elements of observable remains same 
